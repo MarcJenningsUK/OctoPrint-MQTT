@@ -26,6 +26,7 @@ class MqttPlugin(octoprint.plugin.SettingsPlugin,
 		self._mqtt_subscribe_queue = deque()
 
 		self.lastTemp = {}
+		self.lastPublishTemp = None
 
 		
 
@@ -63,7 +64,7 @@ class MqttPlugin(octoprint.plugin.SettingsPlugin,
 	def get_settings_defaults(self):
 		return dict(
 			broker=dict(
-				url=None,
+				url="192.168.1.21",
 				port=1883,
 				username=None,
 				password=None,
@@ -124,6 +125,9 @@ class MqttPlugin(octoprint.plugin.SettingsPlugin,
 	def on_printer_add_temperature(self, data):
 		topic = self._get_topic("temperature")
 
+		if self.lastPublishTemp != None && self.lastPublishTemp + 60 < time.time():
+			continue
+		
 		if topic:
 			for key, value in data.items():
 				if key == "time":
@@ -137,6 +141,7 @@ class MqttPlugin(octoprint.plugin.SettingsPlugin,
 					               target=value["target"])
 					self.mqtt_publish(topic.format(temp=key), json.dumps(dataset), retained=True, allow_queueing=True)
 					self.lastTemp.update({key:data[key]})
+					self.lastPublishTemp = time.time()
 
 	##~~ Softwareupdate hook
 
